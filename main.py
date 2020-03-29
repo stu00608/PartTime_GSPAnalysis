@@ -5,8 +5,8 @@ import time
 import os
 os.chdir(r"C:\Users\Naichen\Documents\GitHub\stu00608.github.io\PartTime_GSPAnalysis")
 
-def timeCheck(rowA,rowB):
-    return rowB['datetime']-rowA['datetime'] <= delta
+def timeCheck(timeA,timeB):
+    return timeB-timeA <= delta
 
 print("Read and Preprocess File\n")
 
@@ -26,7 +26,10 @@ print("Done\n\n")
 
 time_base_data = list()
 delta = datetime.timedelta(minutes=10)
+
 df2 = df1.copy()
+# df2 = df1.head(500).copy()
+
 Range = len(df2)
 
 print("Unique the Data\n")
@@ -40,47 +43,51 @@ resultMatrix = np.array([[0]*len(equipmentList)]*len(equipmentList),dtype=int)
 
 print("Main Process...\n\n")
 start_time = time.time()
-
-
+equipmentSet = set()
 resultdf = pd.DataFrame(columns=equipmentList)
 
 for indexA , rowA in df2.iterrows():
     equipmentNum = [0]*len(equipmentList)
-    print("A Round",indexA,"  Start")
-    for indexB , rowB in df2.iterrows():
-        print(indexA,"B Round",indexB)
-        if(indexB<=indexA):
-            print("B",indexB,"pass")
-            continue
-        elif( timeCheck(rowA,rowB) ):
+    print("A Round : ",indexA,"  Start")
+    for indexB , rowB in df2.iloc[indexA+1:].iterrows():
+        # print(indexA,"B Round",indexB)
+        if( timeCheck(rowA['datetime'],rowB['datetime']) ):
+            # print('rowB[\'Equipment Code\'] : ',rowB['Equipment Code'])
+            # print("equipmentList.index(rowB['Equipment Code']) : ",equipmentList.index(rowB['Equipment Code']))
             equipmentNum[equipmentList.index(rowB['Equipment Code'])] += 1
         else:
             break
-    resultdf[rowA['Equipment Code']] = equipmentNum
-    print("A Round",indexA,"  End")
+    # print('rowA[\'Equipment Code\'] : ',rowA['Equipment Code'])
 
+    if(rowA['Equipment Code'] in equipmentSet):
+        resultdf[rowA['Equipment Code']] += equipmentNum
+    else:
+        resultdf[rowA['Equipment Code']] = equipmentNum
+        equipmentSet.add(rowA['Equipment Code'])
 
+    print("A Round : ",indexA,"  End")
 
-for i in range(Range):
-    for j in range(Range):
+print("main loop done \n")
 
-        if(df2['datetime'][j]-df2['datetime'][i] > delta):
-            break
-        elif(df2['datetime'][j]-df2['datetime'][i] <= delta):
-            resultMatrix[equipmentList.index(df2.at[i,'Equipment Code'])][equipmentList.index(df2.at[j,'Equipment Code'])] += 1
-        elif(df2['datetime'][j] == df2['datetime'][i]):
-            resultMatrix[equipmentList.index(df2.at[i,'Equipment Code'])][equipmentList.index(df2.at[j,'Equipment Code'])] = np.nan
+print("Check...\n")
 
-
-
+if(len(equipmentList) != len(equipmentSet)):
+    print("Error!! len(equipmentList) != len(equipmentSet)")
+    
 
 print("Process Time : ",time.time()-start_time,"sec\n")
 print("Done\n\n")
 
 print("Output\n")
 
-result = pd.DataFrame(data=resultMatrix,columns=equipmentList,index=equipmentList)
+resultdf.index = equipmentList
 
-result.to_excel('result.xlsx',encoding='utf_8_sig')
+with pd.ExcelWriter('resultdf.xlsx') as writer:
+
+    df2.to_excel(writer,sheet_name='Data',encoding='utf_8_sig')
+    resultdf.to_excel(writer,sheet_name='Result',encoding='utf_8_sig')
+    
 
 print("Done\n\n")
+
+exit()
