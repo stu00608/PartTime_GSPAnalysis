@@ -14,50 +14,46 @@ df = pd.read_excel("input.xlsx",sheet_name=2,usecols=[6,7,8])
 df1 = df.dropna(subset=["Equipment Code"]).reset_index(drop=True).copy()
 
 for i in range(len(df1)):
+    # 將日期分項取出
     D, M, Y = df1['Application Date'][i].split("/")
     h, m = df1['Application time'][i].split(":")
+    # 將取出的日期轉成datatime格式保存進新的欄位
     df1.at[i,"datetime"] = datetime.datetime(int(Y),int(M),int(D),int(h),int(m))
-    #df1.at[i,"Equipment Code"] = [df1.loc[i,"Equipment Code"]]
-    #df1.at[i,"time_string"] = [str(Y)+str(M)+str(D)+str(h)+str(m)]
-
-    #print("YMDhm",str(Y)+str(M)+str(D)+str(h)+str(m))
 
 print("Done\n\n")
 
-time_base_data = list()
+#判斷時間差
 delta = datetime.timedelta(minutes=10)
 
+#複製一份資料
 df2 = df1.copy()
 # df2 = df1.head(500).copy()
 
-Range = len(df2)
-
 print("Unique the Data\n")
-
 equipmentList = pd.unique(df2['Equipment Code']).tolist()
 
 print("Done\n\n")
 
+# 新增一個全都為零的二維陣列，兩維長度皆為Equipment Code的種類
 resultMatrix = np.array([[0]*len(equipmentList)]*len(equipmentList),dtype=int)
 
-
 print("Main Process...\n\n")
+
+#計時
 start_time = time.time()
+#判斷用
 equipmentSet = set()
+#存放結果的DataFrame
 resultdf = pd.DataFrame(columns=equipmentList)
 
 for indexA , rowA in df2.iterrows():
     equipmentNum = [0]*len(equipmentList)
     print("A Round : ",indexA,"  Start")
     for indexB , rowB in df2.iloc[indexA+1:].iterrows():
-        # print(indexA,"B Round",indexB)
         if( timeCheck(rowA['datetime'],rowB['datetime']) ):
-            # print('rowB[\'Equipment Code\'] : ',rowB['Equipment Code'])
-            # print("equipmentList.index(rowB['Equipment Code']) : ",equipmentList.index(rowB['Equipment Code']))
             equipmentNum[equipmentList.index(rowB['Equipment Code'])] += 1
         else:
             break
-    # print('rowA[\'Equipment Code\'] : ',rowA['Equipment Code'])
 
     if(rowA['Equipment Code'] in equipmentSet):
         resultdf[rowA['Equipment Code']] += equipmentNum
@@ -67,18 +63,10 @@ for indexA , rowA in df2.iterrows():
 
     print("A Round : ",indexA,"  End")
 
-print("main loop done \n")
 
-print("Check...\n")
+print("Process Time : ",time.time()-start_time,"sec\n\n")
 
-if(len(equipmentList) != len(equipmentSet)):
-    print("Error!! len(equipmentList) != len(equipmentSet)")
-    
-
-print("Process Time : ",time.time()-start_time,"sec\n")
-print("Done\n\n")
-
-print("Output\n")
+print("Output...\n")
 
 resultdf.index = equipmentList
 
